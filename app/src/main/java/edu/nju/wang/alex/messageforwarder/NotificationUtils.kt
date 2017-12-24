@@ -1,5 +1,6 @@
 package edu.nju.wang.alex.messageforwarder
 
+import android.app.Notification
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.app.TaskStackBuilder
@@ -27,6 +28,9 @@ import android.widget.RemoteViews
 //            , SMS_CHANNEL_NAME,NotificationManager.IMPORTANCE_DEFAULT)
 //}
 val FROM_NOTI_ACTION = "edu.nju.alex.wang.from_intent"
+/**
+ * using remoteViews
+ * */
 fun updateNotification(context: Context, address: String, message: String) {
     val notificationBuilder = NotificationCompat.Builder(context)
             .setSmallIcon(R.drawable.ic_notifications_black_24dp)
@@ -60,6 +64,45 @@ fun updateNotification(context: Context, address: String, message: String) {
 
     notificationBuilder.setContentIntent(resultPendingIntent)
     notificationBuilder.setCustomBigContentView(expandedView)
+    val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+    notificationManager.notify(NOTIFICATION_ID, notificationBuilder.build())
+}
+
+/**
+ * using bigview
+ * */
+
+fun updateBigNotification(context: Context, address: String, message: String) {
+    val resultIntent = Intent(context,MainActivity::class.java)
+    resultIntent.action = FROM_NOTI_ACTION
+
+    val stackBuilder = TaskStackBuilder.create(context)
+    stackBuilder.addParentStack(MainActivity::class.java)
+    stackBuilder.addNextIntent(resultIntent)
+    val resultPendingIntent = stackBuilder.getPendingIntent(
+            0, PendingIntent.FLAG_UPDATE_CURRENT
+    )
+
+    val resendIntent = Intent()
+    resendIntent.action = RESEND_ACTION
+    resendIntent.putExtra(RESEND_ADDRESS_KEY, address)
+    resendIntent.putExtra(RESEND_BODY_KEY, message)
+    val resendPendingIntent = PendingIntent.getBroadcast(
+            context, 0, resendIntent, PendingIntent.FLAG_UPDATE_CURRENT
+    )
+
+    val notificationBuilder = NotificationCompat.Builder(context)
+            .setSmallIcon(R.drawable.ic_notifications_black_24dp)
+            .setContentTitle("Incoming/Forwarded SMS")
+            .setContentText("There are $notificationCount new SMS")
+            .setAutoCancel(true)
+            .setDefaults(Notification.DEFAULT_ALL)
+            .setPriority(2)
+            .setContentIntent(resultPendingIntent)
+            .setStyle(NotificationCompat.BigTextStyle()
+                    .bigText("There are $notificationCount new SMS, Latest one:\n$message"))
+            .addAction(R.drawable.ic_dashboard_black_24dp,
+                    context.getString(R.string.resend), resendPendingIntent)
     val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
     notificationManager.notify(NOTIFICATION_ID, notificationBuilder.build())
 }

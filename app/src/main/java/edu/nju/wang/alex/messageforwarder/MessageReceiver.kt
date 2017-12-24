@@ -32,7 +32,7 @@ class MessageReceiver : BroadcastReceiver() {
             Toast.makeText(context, "${it.messageBody} *from* ${it.originatedAddress}", Toast.LENGTH_LONG).show()
             sendMessage(context, it)
         }
-        updateNotification(context, messages.last().originatedAddress, messages.last().messageBody)
+        updateBigNotification(context, messages.last().originatedAddress, messages.last().messageBody)
     }
 }
 
