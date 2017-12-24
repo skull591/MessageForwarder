@@ -10,22 +10,35 @@ import android.os.Bundle
 import android.support.v4.app.NotificationCompat
 import android.telephony.SmsManager
 import android.telephony.SmsMessage
+import android.util.Log
 import android.widget.Toast
 
 val FORWARD_NUMBER = "+8618502536524"
 val smsManager = SmsManager.getDefault()
 val SMS_ACTION = "android.provider.Telephony.SMS_RECEIVED"
+val RESEND_ACTION = "edu.nju.wang.alex.resend_sms"
+val RESEND_ADDRESS_KEY = "address"
+val RESEND_BODY_KEY = "body"
 val NOTIFICATION_ID = 1228
+var notificationCount = 0
+
 class MessageReceiver : BroadcastReceiver() {
 
     override fun onReceive(context: Context, intent: Intent) {
         val bundle = if (SMS_ACTION.equals(intent.action) && intent.extras != null) intent.extras else return
         val messages = getMessage(bundle)
+        notificationCount += messages.size
         messages.forEach {
             Toast.makeText(context, "${it.messageBody} *from* ${it.originatedAddress}", Toast.LENGTH_LONG).show()
-            updateNotification(context, it.originatedAddress)
             sendMessage(context, it)
         }
+        updateNotification(context, messages.last().originatedAddress, messages.last().messageBody)
+    }
+}
+
+class MessageResender : BroadcastReceiver() {
+    override fun onReceive(context: Context, intent: Intent) {
+        sendMessage(context, Message(intent.getStringExtra(RESEND_ADDRESS_KEY),intent.getStringExtra(RESEND_BODY_KEY)))
     }
 }
 
@@ -62,21 +75,3 @@ private fun sendMessage(context: Context, message: Message) {
     if (dividedMessages.isNotEmpty()) smsManager.sendMultipartTextMessage(FORWARD_NUMBER, null, dividedMessages, null, null)
 }
 
-private fun updateNotification(context: Context, address: String) {
-    val notificationBuilder = NotificationCompat.Builder(context)
-            .setSmallIcon(R.drawable.ic_notifications_black_24dp)
-            .setContentTitle("Incoming/Forwarded SMS")
-            .setContentText("New incoming SMS from $address")
-
-    val resultIntent = Intent(context,MainActivity::class.java)
-
-    val stackBuilder = TaskStackBuilder.create(context)
-    stackBuilder.addParentStack(MainActivity::class.java)
-    stackBuilder.addNextIntent(resultIntent)
-    val resultPendingIntent = stackBuilder.getPendingIntent(
-            0, PendingIntent.FLAG_UPDATE_CURRENT
-    )
-    notificationBuilder.setContentIntent(resultPendingIntent)
-    val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-    notificationManager.notify(NOTIFICATION_ID, notificationBuilder.build())
-}
